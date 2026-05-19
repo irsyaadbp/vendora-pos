@@ -1,3 +1,4 @@
+import { Suspense } from 'react';
 import { LoginForm } from '@/features/auth/components/LoginForm';
 import { DemoAccounts } from '@/features/auth/components/DemoAccounts';
 
@@ -25,7 +26,9 @@ export default function LoginPage() {
           <h2 className="mb-6 text-lg font-semibold text-neutral-900">
             Sign in to your account
           </h2>
-          <LoginForm />
+          <Suspense fallback={null}>
+            <LoginForm />
+          </Suspense>
         </div>
 
         {/* Demo Accounts */}
