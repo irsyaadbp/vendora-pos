@@ -121,8 +121,12 @@ def get_rate_limiter() -> InMemoryRateLimiter:
 # ---------------------------------------------------------------------------
 
 # CORS middleware
-# CORS origins from environment or default to localhost
-_cors_origins = os.environ.get("CORS_ORIGINS", "http://localhost:3000").split(",")
+# CORS origins from settings
+try:
+    _settings = get_settings()
+    _cors_origins = _settings.CORS_ORIGINS.split(",")
+except SystemExit:
+    _cors_origins = ["http://localhost:3000"]
 
 app.add_middleware(
     CORSMiddleware,
