@@ -1,0 +1,131 @@
+@import "tailwindcss";
+@config "../../tailwind.config.ts";
+
+/* ===== Base Styles ===== */
+
+@layer base {
+  :root {
+    --color-background: #ffffff;
+    --color-foreground: #171717;
+    --color-muted: #737373;
+    --color-border: #e5e5e5;
+    --color-input: #f5f5f5;
+    --color-ring: #3b82f6;
+  }
+
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --color-background: #0a0a0a;
+      --color-foreground: #ededed;
+      --color-muted: #a3a3a3;
+      --color-border: #262626;
+      --color-input: #171717;
+      --color-ring: #60a5fa;
+    }
+  }
+
+  *,
+  *::before,
+  *::after {
+    border-color: var(--color-border);
+  }
+
+  html {
+    font-family: var(--font-geist-sans), system-ui, sans-serif;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+
+  body {
+    background-color: var(--color-background);
+    color: var(--color-foreground);
+    min-height: 100vh;
+  }
+
+  /* Focus ring styles for accessibility */
+  :focus-visible {
+    outline: 2px solid var(--color-ring);
+    outline-offset: 2px;
+  }
+
+  /* Remove default button styles */
+  button {
+    cursor: pointer;
+  }
+
+  /* Smooth scrolling */
+  @media (prefers-reduced-motion: no-preference) {
+    html {
+      scroll-behavior: smooth;
+    }
+  }
+}
+
+/* ===== Component Utilities ===== */
+
+@layer components {
+  /* Card container */
+  .card {
+    @apply rounded-xl border border-neutral-200 bg-white p-6 shadow-soft;
+  }
+
+  @media (prefers-color-scheme: dark) {
+    .card {
+      @apply border-neutral-800 bg-neutral-900;
+    }
+  }
+
+  /* Form input base */
+  .input-base {
+    @apply w-full rounded-lg border border-neutral-300 bg-white px-3 py-2 text-sm
+      placeholder:text-neutral-400
+      focus:border-primary-500 focus:outline-none focus:ring-2 focus:ring-primary-500/20
+      disabled:cursor-not-allowed disabled:opacity-50;
+  }
+
+  @media (prefers-color-scheme: dark) {
+    .input-base {
+      @apply border-neutral-700 bg-neutral-800 placeholder:text-neutral-500;
+    }
+  }
+
+  /* Badge styles */
+  .badge {
+    @apply inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium;
+  }
+
+  .badge-success {
+    @apply inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium bg-success-100 text-success-700;
+  }
+
+  .badge-warning {
+    @apply inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium bg-warning-100 text-warning-700;
+  }
+
+  .badge-danger {
+    @apply inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium bg-danger-100 text-danger-700;
+  }
+
+  .badge-neutral {
+    @apply inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium bg-neutral-100 text-neutral-700;
+  }
+}
+
+/* ===== Custom Utilities ===== */
+
+@layer utilities {
+  /* Text balance for headings */
+  .text-balance {
+    text-wrap: balance;
+  }
+
+  /* Hide scrollbar but keep functionality */
+  .scrollbar-hide {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+  }
+
+  .scrollbar-hide::-webkit-scrollbar {
+    display: none;
+  }
+}

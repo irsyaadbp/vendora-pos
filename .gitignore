@@ -1,0 +1,58 @@
+# =============================================================================
+# Vendora POS - Root .gitignore
+# =============================================================================
+
+# Environment files
+.env
+.env.*
+!.env.example
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.venv/
+venv/
+env/
+.pytest_cache/
+.coverage
+htmlcov/
+.hypothesis/
+*.egg-info/
+
+# Node.js
+node_modules/
+
+# Next.js
+.next/
+out/
+
+# Build artifacts
+dist/
+build/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Kiro specs
+.kiro/
+
+# Documentation (internal)
+docs/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Debug logs
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+.pnpm-debug.log*
+
+# Database
+*.db
