@@ -39,7 +39,7 @@ apiClient.interceptors.request.use(
   (error) => Promise.reject(error)
 );
 
-// Response interceptor: on 401, attempt single token refresh, retry original request
+// Response interceptor: on 401, attempt token refresh via proxy, retry original request
 apiClient.interceptors.response.use(
   (response) => response,
   async (error: AxiosError) => {
@@ -52,7 +52,7 @@ apiClient.interceptors.response.use(
       return Promise.reject(error);
     }
 
-    // Don't attempt refresh on auth endpoints (login/refresh/logout)
+    // Don't attempt refresh on auth endpoints
     const requestUrl = originalRequest.url || '';
     if (requestUrl.includes('/auth/')) {
       return Promise.reject(error);
@@ -74,13 +74,8 @@ apiClient.interceptors.response.use(
     isRefreshing = true;
 
     try {
-      // Attempt token refresh using the refresh cookie
-      const response = await axios.post(
-        `${process.env.NEXT_PUBLIC_API_URL}${API_VERSION}/auth/refresh`,
-        {},
-        { withCredentials: true }
-      );
-
+      // Refresh via the Next.js proxy (updates the HTTP-only cookie too)
+      const response = await axios.post('/api/auth/refresh', {}, { withCredentials: true });
       const { access_token } = response.data.data;
 
       // Update auth store with new token
@@ -103,12 +98,9 @@ apiClient.interceptors.response.use(
       processQueue(refreshError);
       useAuthStore.getState().clearAuth();
 
-      // Redirect to login within 1 second
-      setTimeout(() => {
-        if (typeof window !== 'undefined') {
-          window.location.href = '/login';
-        }
-      }, 500);
+      if (typeof window !== 'undefined') {
+        window.location.href = '/login';
+      }
 
       return Promise.reject(refreshError);
     } finally {

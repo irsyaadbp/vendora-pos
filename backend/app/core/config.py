@@ -40,6 +40,8 @@ class Settings(BaseSettings):
     MAX_LOGIN_ATTEMPTS: int = 5
     LOGIN_LOCKOUT_MINUTES: int = 15
     CORS_ORIGINS: str = "http://localhost:3000"
+    COOKIE_DOMAIN: str = ""
+    COOKIE_SECURE: bool = False
 
     model_config = SettingsConfigDict(env_file=".env", env_file_encoding="utf-8")
 
