@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
+const COOKIE_DOMAIN = process.env.NEXT_PUBLIC_COOKIE_DOMAIN || undefined;
 
 /**
  * POST /api/auth/login
@@ -43,22 +44,24 @@ export async function POST(request: NextRequest) {
 
   const response = NextResponse.json(data, { status: 200 });
 
+  const commonOptions = {
+    httpOnly: true,
+    secure: process.env.NODE_ENV === 'production',
+    sameSite: 'lax' as const,
+    path: '/',
+    ...(COOKIE_DOMAIN ? { domain: COOKIE_DOMAIN } : {}),
+  };
+
   if (accessToken) {
     response.cookies.set('access_token', accessToken, {
-      httpOnly: true,
-      secure: process.env.NODE_ENV === 'production',
-      sameSite: 'lax',
-      path: '/',
+      ...commonOptions,
       maxAge: 15 * 60, // 15 minutes
     });
   }
 
   if (refreshToken) {
     response.cookies.set('refresh_token', refreshToken, {
-      httpOnly: true,
-      secure: process.env.NODE_ENV === 'production',
-      sameSite: 'lax',
-      path: '/',
+      ...commonOptions,
       maxAge: 7 * 24 * 60 * 60, // 7 days
     });
   }

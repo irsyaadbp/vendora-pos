@@ -241,18 +241,14 @@ function Sidebar({
   );
 }
 
+import { useLogout } from "@/features/auth/hooks/useAuth";
+
 function Header({ onMenuToggle }: { onMenuToggle: () => void }) {
   const user = useAuthStore((state) => state.user);
-  const clearAuth = useAuthStore((state) => state.clearAuth);
-  const router = useRouter();
+  const logoutMutation = useLogout();
 
   function handleLogout() {
-    clearAuth();
-    document.cookie =
-      "refresh_token=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT";
-    document.cookie =
-      "user_role=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT";
-    router.push("/login");
+    logoutMutation.mutate();
   }
 
   return (
