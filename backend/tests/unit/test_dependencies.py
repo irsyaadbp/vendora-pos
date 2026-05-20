@@ -225,6 +225,41 @@ class TestGetCurrentUser:
 
             assert "inactive" in exc_info.value.message
 
+    @pytest.mark.asyncio
+    async def test_cookie_token_used_when_no_bearer(self):
+        """Should return user when access_token cookie present and no Bearer header."""
+        user_id = uuid.uuid4()
+        mock_user = _make_user(user_id=user_id, is_active=True)
+
+        with patch(
+            "app.core.dependencies.verify_access_token",
+            return_value={"sub": str(user_id), "role": "staff"},
+        ), patch(
+            "app.repositories.user_repository.UserRepository"
+        ) as MockRepo:
+            mock_repo_instance = MockRepo.return_value
+            mock_repo_instance.get_by_id = AsyncMock(return_value=mock_user)
+
+            result = await get_current_user(
+                token=None,
+                cookie_token="valid.cookie.token",
+                session=AsyncMock(),
+            )
+
+            assert result == mock_user
+
+    @pytest.mark.asyncio
+    async def test_no_bearer_no_cookie_raises_unauthorized(self):
+        """Should raise UnauthorizedException when both Bearer and cookie are missing."""
+        with pytest.raises(UnauthorizedException) as exc_info:
+            await get_current_user(
+                token=None,
+                cookie_token=None,
+                session=AsyncMock(),
+            )
+
+        assert "Not authenticated" in exc_info.value.message
+
 
 class TestRequireAdmin:
     """Tests for require_admin dependency."""

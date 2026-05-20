@@ -6,8 +6,9 @@ that can be injected into route handlers.
 
 import uuid
 from dataclasses import dataclass
+from typing import Optional
 
-from fastapi import Depends, Query
+from fastapi import Cookie, Depends, Query
 from fastapi.security import OAuth2PasswordBearer
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -16,8 +17,9 @@ from app.infrastructure.security import verify_access_token
 from app.models.user import User
 from app.schemas.enums import UserRole
 
-# OAuth2 scheme extracts the Bearer token from the Authorization header
-oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/api/v1/auth/login")
+# auto_error=False so a missing Bearer header doesn't immediately 401;
+# we fall back to the access_token cookie before raising.
+oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/api/v1/auth/login", auto_error=False)
 
 
 @dataclass
@@ -70,29 +72,39 @@ async def _get_db_session():  # type: ignore[no-untyped-def]
 
 
 async def get_current_user(
-    token: str = Depends(oauth2_scheme),
+    token: Optional[str] = Depends(oauth2_scheme),
+    cookie_token: Optional[str] = Cookie(default=None, alias="access_token"),
     session: AsyncSession = Depends(_get_db_session),
 ) -> User:
     """Dependency that extracts and verifies the current authenticated user.
 
-    Extracts the JWT from the Authorization header, verifies its signature
-    and expiration, looks up the user by the token's "sub" claim, and
-    checks that the user account is active.
+    Resolves the JWT in priority order:
+      1. Authorization: Bearer <token> header
+      2. access_token httpOnly cookie (set by the Next.js proxy on login/refresh)
+
+    Role authorization is derived from the JWT payload by downstream dependencies
+    (e.g. require_admin). It is never read from a cookie.
 
     Args:
-        token: JWT access token extracted from Authorization header.
+        token: JWT from Authorization header (None if absent, auto_error=False).
+        cookie_token: JWT from access_token cookie (None if absent).
         session: Async database session for user lookup.
 
     Returns:
         The authenticated User instance.
 
     Raises:
-        UnauthorizedException: If the token is missing, invalid, expired,
-            the user does not exist, or the user account is inactive.
+        UnauthorizedException: If no token found, token invalid/expired,
+            user not found, or user inactive.
     """
+    resolved_token = token or cookie_token
+
+    if not resolved_token:
+        raise UnauthorizedException(message="Not authenticated")
+
     # Verify the JWT token (signature, expiration, structure)
     try:
-        payload = verify_access_token(token)
+        payload = verify_access_token(resolved_token)
     except ValueError:
         raise UnauthorizedException(message="Invalid or expired token")
 
@@ -126,9 +138,6 @@ async def require_admin(
     current_user: User = Depends(get_current_user),
 ) -> User:
     """Dependency that requires the current user to have the admin role.
-
-    Wraps get_current_user and additionally checks that the authenticated
-    user has the admin role.
 
     Args:
         current_user: The authenticated user from get_current_user.
