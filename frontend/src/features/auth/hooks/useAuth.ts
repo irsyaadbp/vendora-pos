@@ -5,11 +5,10 @@ import { authService } from '../services/auth.service';
 /**
  * TanStack Query mutation for user login.
  * On success, redirects to the callbackUrl (if present) or home page.
- * Uses router.replace to navigate after login so the login page
- * is not in the browser history.
+ * Uses window.location for a full navigation to ensure the freshly-set
+ * user_role cookie is sent with the request to the middleware.
  */
 export function useLogin() {
-  const router = useRouter();
   const searchParams = useSearchParams();
 
   return useMutation({
@@ -17,8 +16,6 @@ export function useLogin() {
       authService.login(email, password),
     onSuccess: () => {
       const callbackUrl = searchParams.get('callbackUrl') || '/';
-      // Use window.location for a full navigation to ensure the freshly-set
-      // user_role cookie is sent with the request to the middleware.
       window.location.href = callbackUrl;
     },
   });

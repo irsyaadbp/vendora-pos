@@ -3,12 +3,15 @@ import { NextRequest, NextResponse } from "next/server";
 /**
  * Cookie names used for authentication state in middleware.
  *
- * - REFRESH_TOKEN_COOKIE: HTTP-only cookie set by the backend on login/refresh.
- *   Its presence indicates the user has an active session.
  * - USER_ROLE_COOKIE: Non-HTTP-only cookie set by the frontend after login.
  *   Contains the user's role ("admin" | "staff") for route-level access control.
+ *   This is the primary indicator of an active session for middleware purposes.
+ *
+ * Note: The refresh_token is an HTTP-only cookie set by the backend domain.
+ * In cross-origin deployments (frontend and backend on different subdomains),
+ * the browser won't send the backend's cookie to the frontend server,
+ * so we rely solely on user_role for middleware route protection.
  */
-const REFRESH_TOKEN_COOKIE = "refresh_token";
 const USER_ROLE_COOKIE = "user_role";
 
 type UserRole = "admin" | "staff";
@@ -87,18 +90,16 @@ export function middleware(request: NextRequest): NextResponse {
   // Allow public routes without any auth check
   if (isPublicRoute(pathname)) {
     // If user is already authenticated and visits /login, redirect to home
-    const refreshToken = request.cookies.get(REFRESH_TOKEN_COOKIE);
     const userRoleCookie = request.cookies.get(USER_ROLE_COOKIE);
-    if (refreshToken && userRoleCookie) {
+    if (userRoleCookie) {
       return NextResponse.redirect(new URL("/", request.url));
     }
     return NextResponse.next();
   }
 
-  // Check authentication: need both refresh_token and user_role cookies
-  const refreshToken = request.cookies.get(REFRESH_TOKEN_COOKIE);
+  // Check authentication: user_role cookie indicates an active session
   const userRoleCookie = request.cookies.get(USER_ROLE_COOKIE);
-  if (!refreshToken || !userRoleCookie) {
+  if (!userRoleCookie) {
     const loginUrl = new URL("/login", request.url);
     loginUrl.searchParams.set("callbackUrl", pathname);
     return NextResponse.redirect(loginUrl);
