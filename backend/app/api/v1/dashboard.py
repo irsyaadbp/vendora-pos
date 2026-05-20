@@ -34,11 +34,13 @@ async def get_dashboard(
     low-stock products, active staff count, and recent transactions.
     Returns 403 for non-admin access.
     """
+    from app.core.config import get_settings
     from app.repositories.product_repository import ProductRepository
     from app.repositories.transaction_repository import TransactionRepository
     from app.repositories.user_repository import UserRepository
     from app.services.dashboard_service import DashboardService
 
+    settings = get_settings()
     transaction_repo = TransactionRepository(session)
     product_repo = ProductRepository(session)
     user_repo = UserRepository(session)
@@ -47,6 +49,7 @@ async def get_dashboard(
         txn_repo=transaction_repo,
         product_repo=product_repo,
         user_repo=user_repo,
+        settings=settings,
     )
 
     metrics = await dashboard_service.get_dashboard_metrics()

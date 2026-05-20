@@ -178,6 +178,8 @@ class DashboardService:
                 threshold=self._settings.LOW_STOCK_THRESHOLD,
                 pagination=pagination,
             )
+            for product in result.items:
+                product.low_stock = True
             metrics.low_stock_products = result.items
         except Exception as e:
             logger.error(f"Failed to fetch low-stock products: {e}")

@@ -27,6 +27,8 @@ class RecentTransactionResponse(BaseModel):
     total_amount: Decimal
     created_at: datetime
 
+    model_config = {"from_attributes": True}
+
 
 class DashboardResponse(BaseModel):
     """Schema for the full dashboard metrics response.
@@ -54,3 +56,5 @@ class DashboardResponse(BaseModel):
         default=None,
         description="Partial failure indicators keyed by metric name",
     )
+
+    model_config = {"from_attributes": True}
