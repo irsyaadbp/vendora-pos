@@ -14,7 +14,10 @@ import { authService } from '../services/auth.service';
 export function useMe() {
   return useQuery({
     queryKey: ['auth', 'me'],
-    queryFn: () => authService.me(),
+    queryFn: async () => {
+      const data = await authService.me();
+      return data.user;
+    },
     retry: false,
     staleTime: 5 * 60 * 1000,
   });

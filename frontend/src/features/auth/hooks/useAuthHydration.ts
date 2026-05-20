@@ -3,14 +3,14 @@
 import { useEffect, useState } from 'react';
 import { useAuthStore } from '@/core/stores/auth.store';
 import { authService } from '../services/auth.service';
-import { apiClient } from '@/core/api/client';
-import type { APIResponse } from '@/core/types/api';
-import type { User } from '@/core/types/models';
 
 /**
- * Rehydrates auth state on page refresh.
- * If the refresh_token cookie exists but the Zustand store is empty,
- * calls /auth/refresh to get a new access token, then fetches user info.
+ * Rehydrates auth state on page load.
+ * Optimistic flow:
+ * 1. Tries to call /api/auth/me using the current access_token cookie first (1 network call).
+ * 2. If it fails (due to missing or expired access_token), attempts /api/auth/refresh to rotate cookies.
+ * 3. If refresh succeeds, retries /api/auth/me to fetch profile.
+ * 4. If everything fails, clears the auth state.
  */
 export function useAuthHydration() {
   const [isHydrating, setIsHydrating] = useState(true);
@@ -23,28 +23,22 @@ export function useAuthHydration() {
       return;
     }
 
-    // Check if user_role cookie exists (indicates a session)
-    const hasSession = document.cookie.includes('user_role=');
-    if (!hasSession) {
-      setIsHydrating(false);
-      return;
-    }
-
-    // Try to refresh the token and get user info
     async function hydrate() {
       try {
-        // Refresh token to get new access token
-        const newToken = await authService.refresh();
-
-        // Fetch current user info using the new token
-        const response = await apiClient.get<APIResponse<User>>('/auth/me');
-        const userData = response.data.data;
-
-        setAuth(userData, newToken);
-      } catch {
-        // Refresh failed — clear cookies and state
+        try {
+          // 1. Optimistic: Try to get user profile and access token directly (saves network calls if active)
+          const { user: userData, access_token: token } = await authService.me();
+          setAuth(userData, token);
+        } catch (meError) {
+          // 2. Fallback: If /me failed (e.g. token expired/missing), try to refresh cookies
+          const token = await authService.refresh();
+          // 3. Retry /me with the fresh cookies
+          const { user: userData } = await authService.me();
+          setAuth(userData, token);
+        }
+      } catch (finalError) {
+        // 4. Everything failed — user session is completely invalid/expired
         clearAuth();
-        document.cookie = 'user_role=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT';
       } finally {
         setIsHydrating(false);
       }

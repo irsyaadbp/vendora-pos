@@ -1,7 +1,17 @@
-import { apiClient } from '@/core/api/client';
+import axios from 'axios';
 import { useAuthStore } from '@/core/stores/auth.store';
 import type { APIResponse } from '@/core/types/api';
 import type { User } from '@/core/types/models';
+
+/**
+ * Auth API client — calls the Next.js proxy routes (/api/auth/*)
+ * which handle HTTP-only cookie management on the frontend domain.
+ */
+const authClient = axios.create({
+  baseURL: '/api/auth',
+  withCredentials: true,
+  headers: { 'Content-Type': 'application/json' },
+});
 
 interface LoginResponse {
   access_token: string;
@@ -10,12 +20,12 @@ interface LoginResponse {
 }
 
 /**
- * POST /auth/login — Authenticate with email and password.
- * Stores access token in auth store and sets user_role cookie.
+ * POST /api/auth/login — Authenticate with email and password.
+ * The proxy route sets access_token and refresh_token as HTTP-only cookies.
  */
 async function login(email: string, password: string): Promise<LoginResponse> {
-  const response = await apiClient.post<APIResponse<LoginResponse>>(
-    '/auth/login',
+  const response = await authClient.post<APIResponse<LoginResponse>>(
+    '/login',
     { email, password }
   );
 
@@ -29,19 +39,16 @@ async function login(email: string, password: string): Promise<LoginResponse> {
   // Store auth state in Zustand (memory only)
   useAuthStore.getState().setAuth(user, access_token);
 
-  // Set user_role cookie for middleware route protection (non-HTTP-only)
-  document.cookie = `user_role=${user.role}; path=/; SameSite=Lax`;
-
   return data;
 }
 
 /**
- * POST /auth/refresh — Refresh the access token using the HTTP-only refresh cookie.
- * Returns a new access token.
+ * POST /api/auth/refresh — Refresh the access token.
+ * The proxy route updates the HTTP-only cookies.
  */
 async function refresh(): Promise<string> {
-  const response = await apiClient.post<APIResponse<{ access_token: string }>>(
-    '/auth/refresh'
+  const response = await authClient.post<APIResponse<{ access_token: string }>>(
+    '/refresh'
   );
 
   const { access_token } = response.data.data;
@@ -57,21 +64,26 @@ async function refresh(): Promise<string> {
 }
 
 /**
- * POST /auth/logout — Invalidate the current refresh token.
- * Clears auth store and user_role cookie.
+ * POST /api/auth/logout — Invalidate session.
+ * The proxy route clears all HTTP-only cookies.
  */
 async function logout(): Promise<void> {
-  await apiClient.post('/auth/logout');
-
-  // Clear auth state
+  await authClient.post('/logout');
   useAuthStore.getState().clearAuth();
+}
 
-  // Clear user_role cookie
-  document.cookie = 'user_role=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT';
+/**
+ * GET /api/auth/me — Get current user info.
+ * The proxy route reads the access_token cookie and calls the backend.
+ */
+async function me(): Promise<{ user: User; access_token: string }> {
+  const response = await authClient.get<APIResponse<{ user: User; access_token: string }>>('/me');
+  return response.data.data;
 }
 
 export const authService = {
   login,
   refresh,
   logout,
+  me,
 };
