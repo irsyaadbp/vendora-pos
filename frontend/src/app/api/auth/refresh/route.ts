@@ -6,8 +6,12 @@ const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
  * POST /api/auth/refresh
  *
  * Proxies token refresh to the backend. Rotates access_token and
- * refresh_token cookies. On failure, clears access_token only
- * (refresh_token is already invalid at that point).
+ * refresh_token cookies.
+ *
+ * Note: Node.js fetch() strips Set-Cookie headers in server-to-server calls,
+ * so the backend includes refresh_token in the response body. The proxy reads
+ * it, sets it as an httpOnly cookie, then strips it from the body before
+ * returning to the browser.
  */
 export async function POST(request: NextRequest) {
   const refreshToken = request.cookies.get('refresh_token')?.value;
@@ -25,25 +29,37 @@ export async function POST(request: NextRequest) {
   if (!backendResponse.ok) {
     const response = NextResponse.json(data, { status: backendResponse.status });
     response.cookies.delete('access_token');
+    response.cookies.delete('refresh_token');
     return response;
+  }
+
+  const newAccessToken: string = data.data?.access_token;
+  const newRefreshToken: string = data.data?.refresh_token;
+
+  // Strip refresh_token from the response body — it must not reach the browser
+  if (data.data) {
+    delete data.data.refresh_token;
   }
 
   const response = NextResponse.json(data, { status: 200 });
 
-  // Forward the rotated refresh_token from backend
-  const setCookieHeaders = backendResponse.headers.getSetCookie();
-  for (const cookie of setCookieHeaders) {
-    response.headers.append('Set-Cookie', cookie);
-  }
-
-  const accessToken: string = data.data?.access_token;
-  if (accessToken) {
-    response.cookies.set('access_token', accessToken, {
+  if (newAccessToken) {
+    response.cookies.set('access_token', newAccessToken, {
       httpOnly: true,
       secure: process.env.NODE_ENV === 'production',
       sameSite: 'lax',
       path: '/',
       maxAge: 15 * 60,
+    });
+  }
+
+  if (newRefreshToken) {
+    response.cookies.set('refresh_token', newRefreshToken, {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === 'production',
+      sameSite: 'lax',
+      path: '/',
+      maxAge: 7 * 24 * 60 * 60,
     });
   }
 

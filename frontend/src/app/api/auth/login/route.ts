@@ -7,11 +7,16 @@ const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
  *
  * Proxies login to the backend. On success, sets two httpOnly cookies
  * on the frontend domain:
- *   - access_token  (15 min) — used by BE dependency as Bearer fallback
- *   - refresh_token (7 days) — forwarded from backend Set-Cookie header
+ *   - access_token  (15 min)
+ *   - refresh_token (7 days)
  *
- * Role is NOT stored in a cookie. The full login response body (including
- * user.role) is returned to the client so Zustand can store it in memory.
+ * Note: Node.js fetch() strips Set-Cookie headers in server-to-server calls,
+ * so the backend includes both tokens in the response body. The proxy reads
+ * them, sets them as httpOnly cookies, then strips them from the body before
+ * returning to the browser.
+ *
+ * Role is NOT stored in a cookie — the full user object (including role)
+ * is in the response body so Zustand can store it in memory.
  */
 export async function POST(request: NextRequest) {
   const body = await request.json();
@@ -28,15 +33,16 @@ export async function POST(request: NextRequest) {
     return NextResponse.json(data, { status: backendResponse.status });
   }
 
-  const response = NextResponse.json(data, { status: 200 });
+  const accessToken: string = data.data?.access_token;
+  const refreshToken: string = data.data?.refresh_token;
 
-  // Forward the refresh_token httpOnly cookie set by the backend
-  const setCookieHeaders = backendResponse.headers.getSetCookie();
-  for (const cookie of setCookieHeaders) {
-    response.headers.append('Set-Cookie', cookie);
+  // Strip refresh_token from the response body — it must not reach the browser
+  if (data.data) {
+    delete data.data.refresh_token;
   }
 
-  const accessToken: string = data.data?.access_token;
+  const response = NextResponse.json(data, { status: 200 });
+
   if (accessToken) {
     response.cookies.set('access_token', accessToken, {
       httpOnly: true,
@@ -44,6 +50,16 @@ export async function POST(request: NextRequest) {
       sameSite: 'lax',
       path: '/',
       maxAge: 15 * 60, // 15 minutes
+    });
+  }
+
+  if (refreshToken) {
+    response.cookies.set('refresh_token', refreshToken, {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === 'production',
+      sameSite: 'lax',
+      path: '/',
+      maxAge: 7 * 24 * 60 * 60, // 7 days
     });
   }
 

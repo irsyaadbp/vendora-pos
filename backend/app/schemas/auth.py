@@ -35,15 +35,27 @@ class UserInfo(BaseModel):
 
 
 class LoginResponse(BaseModel):
-    """Schema for login response with access token and user info."""
+    """Schema for login response with access token and user info.
+
+    refresh_token is included so the Next.js proxy can set it as an
+    httpOnly cookie. Node.js fetch() strips Set-Cookie headers in
+    server-to-server calls, so the proxy must read it from the body.
+    The proxy MUST NOT forward refresh_token to the browser.
+    """
 
     access_token: str
+    refresh_token: str
     token_type: str = "bearer"
     user: UserInfo
 
 
 class TokenResponse(BaseModel):
-    """Schema for token refresh response."""
+    """Schema for token refresh response.
+
+    refresh_token is included so the Next.js proxy can rotate the
+    httpOnly cookie. The proxy MUST NOT forward it to the browser.
+    """
 
     access_token: str
+    refresh_token: str
     token_type: str = "bearer"

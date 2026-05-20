@@ -48,29 +48,31 @@ async def _get_db_session():  # type: ignore[no-untyped-def]
 def _set_refresh_cookie(response: Response, refresh_token: str) -> None:
     """Set the refresh token as an HTTP-only cookie.
 
-    Uses samesite=lax and secure=False for local dev compatibility.
-    In production, set secure=True via environment config.
+    Cookie domain and secure flag are controlled via environment config.
     """
     settings = get_settings()
     response.set_cookie(
         key="refresh_token",
         value=refresh_token,
         httponly=True,
-        secure=False,
+        secure=settings.COOKIE_SECURE,
         samesite="lax",
         max_age=settings.JWT_REFRESH_TOKEN_EXPIRE_DAYS * 24 * 60 * 60,
         path="/",
+        domain=settings.COOKIE_DOMAIN or None,
     )
 
 
 def _clear_refresh_cookie(response: Response) -> None:
     """Clear the refresh token cookie."""
+    settings = get_settings()
     response.delete_cookie(
         key="refresh_token",
         httponly=True,
-        secure=False,
+        secure=settings.COOKIE_SECURE,
         samesite="lax",
         path="/",
+        domain=settings.COOKIE_DOMAIN or None,
     )
 
 
@@ -100,6 +102,7 @@ async def login(
 
     login_response = LoginResponse(
         access_token=token_pair.access_token,
+        refresh_token=token_pair.refresh_token,
         user=UserInfo.model_validate(user),
     )
     return APIResponse(
@@ -134,7 +137,10 @@ async def refresh(
     # Commit the session to persist token rotation
     await session.commit()
 
-    token_response = TokenResponse(access_token=token_pair.access_token)
+    token_response = TokenResponse(
+        access_token=token_pair.access_token,
+        refresh_token=token_pair.refresh_token,
+    )
     return APIResponse(
         success=True,
         data=token_response,
@@ -158,7 +164,7 @@ async def logout(
         await auth_service.logout(refresh_token_str=refresh_token)
         await session.commit()
 
-    # Always clear the cookie
+    # Always clear the refresh token cookie
     _clear_refresh_cookie(response)
 
     return APIResponse(
