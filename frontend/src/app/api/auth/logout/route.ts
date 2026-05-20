@@ -1,7 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
-const COOKIE_DOMAIN = process.env.NEXT_PUBLIC_COOKIE_DOMAIN || undefined;
 
 /**
  * POST /api/auth/logout
@@ -24,14 +23,8 @@ export async function POST(request: NextRequest) {
 
   const response = NextResponse.json(data, { status: backendResponse.status });
 
-  response.cookies.delete('access_token', {
-    path: '/',
-    ...(COOKIE_DOMAIN ? { domain: COOKIE_DOMAIN } : {}),
-  });
-  response.cookies.delete('refresh_token', {
-    path: '/',
-    ...(COOKIE_DOMAIN ? { domain: COOKIE_DOMAIN } : {}),
-  });
+  response.cookies.delete('access_token', { path: '/' });
+  response.cookies.delete('refresh_token', { path: '/' });
 
   return response;
 }

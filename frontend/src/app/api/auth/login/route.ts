@@ -1,23 +1,16 @@
 import { NextRequest, NextResponse } from 'next/server';
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
-const COOKIE_DOMAIN = process.env.NEXT_PUBLIC_COOKIE_DOMAIN || undefined;
 
 /**
  * POST /api/auth/login
  *
- * Proxies login to the backend. On success, sets two httpOnly cookies
- * on the frontend domain:
+ * Proxies login to the backend. On success, sets two httpOnly cookies:
  *   - access_token  (15 min)
  *   - refresh_token (7 days)
  *
- * Note: Node.js fetch() strips Set-Cookie headers in server-to-server calls,
- * so the backend includes both tokens in the response body. The proxy reads
- * them, sets them as httpOnly cookies, then strips them from the body before
- * returning to the browser.
- *
- * Role is NOT stored in a cookie — the full user object (including role)
- * is in the response body so Zustand can store it in memory.
+ * Domain is omitted so the browser automatically sets it to the current
+ * Frontend host domain natively.
  */
 export async function POST(request: NextRequest) {
   const body = await request.json();
@@ -49,7 +42,6 @@ export async function POST(request: NextRequest) {
     secure: process.env.NODE_ENV === 'production',
     sameSite: 'lax' as const,
     path: '/',
-    ...(COOKIE_DOMAIN ? { domain: COOKIE_DOMAIN } : {}),
   };
 
   if (accessToken) {
