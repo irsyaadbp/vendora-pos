@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import Link from "next/link";
-import { usePathname, useRouter } from "next/navigation";
+import { usePathname } from "next/navigation";
 import { QueryProvider } from "@/core/providers/QueryProvider";
 import { useAuthStore } from "@/core/stores/auth.store";
 import { useAuthHydration } from "@/features/auth/hooks/useAuthHydration";

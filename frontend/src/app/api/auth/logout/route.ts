@@ -1,6 +1,6 @@
-import { NextRequest, NextResponse } from 'next/server';
+import { NextRequest, NextResponse } from "next/server";
 
-const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
+const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
 
 /**
  * POST /api/auth/logout
@@ -9,12 +9,12 @@ const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
  * cookies on the frontend domain.
  */
 export async function POST(request: NextRequest) {
-  const refreshToken = request.cookies.get('refresh_token')?.value;
+  const refreshToken = request.cookies.get("refresh_token")?.value;
 
   const backendResponse = await fetch(`${API_URL}/api/v1/auth/logout`, {
-    method: 'POST',
+    method: "POST",
     headers: {
-      'Content-Type': 'application/json',
+      "Content-Type": "application/json",
       ...(refreshToken ? { Cookie: `refresh_token=${refreshToken}` } : {}),
     },
   });
@@ -23,8 +23,8 @@ export async function POST(request: NextRequest) {
 
   const response = NextResponse.json(data, { status: backendResponse.status });
 
-  response.cookies.delete('access_token', { path: '/' });
-  response.cookies.delete('refresh_token', { path: '/' });
+  response.cookies.delete("access_token");
+  response.cookies.delete("refresh_token");
 
   return response;
 }
