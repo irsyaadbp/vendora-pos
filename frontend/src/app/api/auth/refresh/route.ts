@@ -30,8 +30,8 @@ export async function POST(request: NextRequest) {
 
   if (!backendResponse.ok) {
     const response = NextResponse.json(data, { status: backendResponse.status });
-    response.cookies.delete('access_token', { path: '/' });
-    response.cookies.delete('refresh_token', { path: '/' });
+    response.cookies.delete('access_token');
+    response.cookies.delete('refresh_token');
     return response;
   }
 
